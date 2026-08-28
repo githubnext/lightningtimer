@@ -15,6 +15,7 @@
   let settingsSeconds = 0;
   let settingsError = '';
   let isFullscreen = false;
+  let isSeeking = false;
   /** @type {HTMLDialogElement} */
   let settingsDialog;
 
@@ -128,6 +129,75 @@
     displaySeconds = durationSeconds;
     status = 'idle';
     if (autostart) startTimer();
+  }
+
+  /** @param {number} fraction */
+  function seekTo(fraction) {
+    const clampedFraction = Math.max(0, Math.min(1, fraction));
+    const wasRunning = status === 'running';
+    remainingMs = durationSeconds * 1000 * (1 - clampedFraction);
+    displaySeconds = Math.ceil(remainingMs / 1000);
+
+    if (remainingMs <= 0) {
+      remainingMs = 0;
+      displaySeconds = 0;
+      status = 'finished';
+      cancelAnimationFrame(frameId);
+      frameId = 0;
+    } else if (wasRunning) {
+      endTime = performance.now() + remainingMs;
+      status = 'running';
+      if (!frameId) frameId = requestAnimationFrame(tick);
+    } else {
+      status = clampedFraction === 0 ? 'idle' : 'paused';
+    }
+  }
+
+  /** @param {PointerEvent} event */
+  function seekFromPointer(event) {
+    const bar = /** @type {HTMLButtonElement} */ (event.currentTarget);
+    const bounds = bar.getBoundingClientRect();
+    seekTo((event.clientX - bounds.left) / bounds.width);
+  }
+
+  /** @param {PointerEvent} event */
+  function startSeeking(event) {
+    event.preventDefault();
+    isSeeking = true;
+    const bar = /** @type {HTMLButtonElement} */ (event.currentTarget);
+    bar.setPointerCapture(event.pointerId);
+    seekFromPointer(event);
+  }
+
+  /** @param {PointerEvent} event */
+  function continueSeeking(event) {
+    if (isSeeking) seekFromPointer(event);
+  }
+
+  /** @param {PointerEvent} event */
+  function stopSeeking(event) {
+    if (!isSeeking) return;
+    if (event.type !== 'pointercancel') seekFromPointer(event);
+    isSeeking = false;
+    const bar = /** @type {HTMLButtonElement} */ (event.currentTarget);
+    if (bar.hasPointerCapture(event.pointerId)) bar.releasePointerCapture(event.pointerId);
+  }
+
+  /** @param {KeyboardEvent} event */
+  function handleProgressKeydown(event) {
+    const elapsedSeconds = durationSeconds - remainingMs / 1000;
+    const step = event.shiftKey ? 30 : 5;
+    let nextElapsed = elapsedSeconds;
+
+    if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') nextElapsed -= step;
+    else if (event.key === 'ArrowRight' || event.key === 'ArrowUp') nextElapsed += step;
+    else if (event.key === 'Home') nextElapsed = 0;
+    else if (event.key === 'End') nextElapsed = durationSeconds;
+    else return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    seekTo(nextElapsed / durationSeconds);
   }
 
   function openSettings() {
@@ -252,9 +322,27 @@
 
 <main class:warning={visualState === 'warning'} class:critical={visualState === 'critical'} class:finished={visualState === 'finished'}>
   <div class="ambient" aria-hidden="true"></div>
-  <div class="progress" aria-hidden="true">
-    <div class="progress__fill" style:width={`${progress * 100}%`}></div>
-  </div>
+  <button
+    class:seeking={isSeeking}
+    class="progress"
+    type="button"
+    role="slider"
+    aria-label="Timer progress"
+    aria-valuemin="0"
+    aria-valuemax={durationSeconds}
+    aria-valuenow={Math.round(progress * durationSeconds)}
+    aria-valuetext={`${spokenTime(displaySeconds)} remaining`}
+    title="Click or drag to seek"
+    onpointerdown={startSeeking}
+    onpointermove={continueSeeking}
+    onpointerup={stopSeeking}
+    onpointercancel={stopSeeking}
+    onkeydown={handleProgressKeydown}
+  >
+    <span class="progress__track" aria-hidden="true">
+      <span class="progress__fill" style:width={`${progress * 100}%`}></span>
+    </span>
+  </button>
 
   <section class="timer-stage" aria-label="Timer">
     <button
@@ -358,6 +446,7 @@
     --muted: #92969d;
     --line: rgba(255, 255, 255, 0.13);
     --panel: rgba(255, 255, 255, 0.075);
+    --primary-label: #090a0c;
     position: relative;
     isolation: isolate;
     display: grid;
@@ -383,6 +472,7 @@
     --muted: rgba(0, 0, 0, 0.63);
     --line: rgba(0, 0, 0, 0.22);
     --panel: rgba(0, 0, 0, 0.1);
+    --primary-label: #ed292d;
     background: #ed292d;
   }
 
@@ -404,15 +494,41 @@
     top: 0;
     right: 0;
     left: 0;
+    width: 100%;
+    height: 16px;
+    padding: 0;
+    touch-action: none;
+    border: 0;
+    background: transparent;
+    cursor: ew-resize;
+  }
+
+  .progress__track {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
     height: 3px;
+    overflow: hidden;
     background: var(--line);
+    transition: height 120ms ease;
+  }
+
+  .progress:hover .progress__track,
+  .progress.seeking .progress__track {
+    height: 6px;
   }
 
   .progress__fill {
+    display: block;
     height: 100%;
     background: var(--foreground);
     opacity: 0.9;
     transition: width 100ms linear, background-color 220ms ease;
+  }
+
+  .progress.seeking .progress__fill {
+    transition: background-color 220ms ease;
   }
 
   footer {
@@ -558,7 +674,7 @@
     min-width: 150px;
     gap: 9px;
     padding: 0 24px;
-    color: #090a0c;
+    color: var(--primary-label);
     border-color: var(--foreground);
     background: var(--foreground);
   }
