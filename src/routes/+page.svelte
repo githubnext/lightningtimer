@@ -174,14 +174,20 @@
   function handleKeydown(event) {
     if (settingsDialog?.open || event.metaKey || event.ctrlKey || event.altKey) return;
     const target = event.target;
-    if (target instanceof HTMLInputElement || target instanceof HTMLButtonElement) return;
+    const isEditing = target instanceof HTMLInputElement
+      || target instanceof HTMLTextAreaElement
+      || target instanceof HTMLSelectElement
+      || (target instanceof HTMLElement && target.isContentEditable);
+    if (isEditing) return;
 
     if (event.code === 'Space') {
       event.preventDefault();
       toggleTimer();
     } else if (event.key.toLowerCase() === 'r') {
+      event.preventDefault();
       resetTimer();
     } else if (event.key.toLowerCase() === 's') {
+      event.preventDefault();
       openSettings();
     }
   }
@@ -259,11 +265,11 @@
         <span class="time__digits">{minuteText}</span>
         <span class="hourglass" aria-hidden="true">
           {#if hourglassState === 'high'}
-            <HourglassHigh size="0.62em" weight="duotone" />
+            <HourglassHigh size="0.465em" weight="duotone" />
           {:else if hourglassState === 'medium'}
-            <HourglassMedium size="0.62em" weight="duotone" />
+            <HourglassMedium size="0.465em" weight="duotone" />
           {:else}
-            <HourglassLow size="0.62em" weight="duotone" />
+            <HourglassLow size="0.465em" weight="duotone" />
           {/if}
         </span>
         <span class="time__digits">{secondText}</span>
@@ -472,10 +478,6 @@
     cursor: pointer;
   }
 
-  .time-button:focus-visible {
-    outline-offset: -8px;
-  }
-
   .time {
     display: inline-flex;
     align-items: center;
@@ -498,10 +500,13 @@
     display: inline-flex;
     width: 0.62em;
     height: 0.82em;
+    align-self: center;
     align-items: center;
     justify-content: center;
     color: currentColor;
     flex: 0 0 auto;
+    line-height: 0;
+    transform: translateY(-0.035em);
   }
 
   footer {

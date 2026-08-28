@@ -31,10 +31,9 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
-button:focus-visible,
-input:focus-visible {
-  outline: 3px solid currentColor;
-  outline-offset: 3px;
+*:focus,
+*:focus-visible {
+  outline: none;
 }
 
 .sr-only {
