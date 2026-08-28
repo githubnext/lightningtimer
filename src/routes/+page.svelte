@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { HourglassHigh, HourglassMedium, HourglassLow } from 'phosphor-svelte';
+  import Hourglass from '$lib/Hourglass.svelte';
 
   const DEFAULT_DURATION = 5 * 60;
   const STORAGE_KEY = 'lightningtimer-duration';
@@ -31,7 +31,6 @@
   $: progress = durationSeconds > 0
     ? Math.max(0, Math.min(1, 1 - remainingMs / (durationSeconds * 1000)))
     : 0;
-  $: hourglassState = progress < 1 / 3 ? 'high' : progress < 2 / 3 ? 'medium' : 'low';
   $: statusText = status === 'running'
     ? 'In progress'
     : status === 'paused'
@@ -79,7 +78,10 @@
   /** @param {number} now */
   function tick(now) {
     remainingMs = Math.max(0, endTime - now);
-    displaySeconds = Math.ceil(remainingMs / 1000);
+    const nextDisplaySeconds = Math.ceil(remainingMs / 1000);
+    if (nextDisplaySeconds !== displaySeconds) {
+      displaySeconds = nextDisplaySeconds;
+    }
 
     if (remainingMs <= 0) {
       remainingMs = 0;
@@ -199,9 +201,9 @@
 
   /**
    * @param {HTMLElement} node
-   * @param {string} _value
+   * @param {number} _characterCount
    */
-  function fitText(node, _value) {
+  function fitText(node, _characterCount) {
     const container = node.parentElement;
     let animationFrame = 0;
 
@@ -230,8 +232,8 @@
     scheduleFit();
 
     return {
-      /** @param {string} _value */
-      update(_value) {
+      /** @param {number} _characterCount */
+      update(_characterCount) {
         scheduleFit();
       },
       destroy() {
@@ -261,16 +263,10 @@
       onclick={toggleTimer}
       aria-label={`${spokenTime(displaySeconds)} remaining. ${status === 'running' ? 'Pause' : status === 'finished' ? 'Restart' : 'Start'} timer.`}
     >
-      <span class="time" use:fitText={formattedTime}>
+      <span class="time" use:fitText={formattedTime.length}>
         <span class="time__digits">{minuteText}</span>
         <span class="hourglass" aria-hidden="true">
-          {#if hourglassState === 'high'}
-            <HourglassHigh size="0.465em" weight="duotone" />
-          {:else if hourglassState === 'medium'}
-            <HourglassMedium size="0.465em" weight="duotone" />
-          {:else}
-            <HourglassLow size="0.465em" weight="duotone" />
-          {/if}
+          <Hourglass {progress} running={status === 'running'} size="0.465em" />
         </span>
         <span class="time__digits">{secondText}</span>
       </span>
