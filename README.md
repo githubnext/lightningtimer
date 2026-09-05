@@ -47,11 +47,11 @@ Live connections are tracked in memory, not written every few seconds. After an 
 
 ## Development
 
-Requires **Node.js 24 or later** (uses the built-in `node:sqlite` module).
+Requires **Node.js 24 or later** (uses the built-in `node:sqlite` module) and **pnpm 11.18.0** (pinned in `package.json`).
 
 ```sh
-npm ci
-npm run dev
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
 The database is created lazily when the first room connects, at `data/timers.sqlite` by default. Set `DATABASE_PATH` to override it. The parent directory is created automatically.
@@ -59,11 +59,11 @@ The database is created lazily when the first room connects, at `data/timers.sql
 ## Checks and tests
 
 ```sh
-npm run check
-npm test                  # Timer state, validation, persistence, subscriptions, cleanup
-npm run test:integration  # Builds, then tests HTTP/SSE and production-server restart
-npx playwright install chromium
-npm run test:browser      # Builds, then tests local mode, two clients, clock skew, reconnects
+pnpm run check
+pnpm test                  # Timer state, validation, persistence, subscriptions, cleanup
+pnpm run test:integration  # Builds, then tests HTTP/SSE and production-server restart
+pnpm exec playwright install chromium
+pnpm run test:browser      # Builds, then tests local mode, two clients, clock skew, reconnects
 ```
 
 Tests use isolated databases, not the application's normal database.
@@ -73,15 +73,15 @@ Tests use isolated databases, not the application's normal database.
 This application needs **one long-running Node process and persistent local disk**. It is no longer a static site; GitHub Pages deployment has been removed. Multiple workers/replicas are not supported because SSE subscribers are held in process memory.
 
 ```sh
-npm ci
-npm run check
-npm run build
+pnpm install --frozen-lockfile
+pnpm run check
+pnpm run build
 
 ORIGIN=https://timer.example.com \
 HOST=127.0.0.1 \
 PORT=3000 \
 DATABASE_PATH=/var/lib/lightningtimer/timers.sqlite \
-npm start
+pnpm start
 ```
 
 Set `ORIGIN` to the public site origin (scheme and host, no path), especially behind a reverse proxy. Timer commands must come from that same origin. Run the process using your preferred service manager, and ensure its user can write to the database directory. On deployment, preserve that directory and its SQLite WAL/SHM files rather than replacing it with the build output.

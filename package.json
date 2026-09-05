@@ -3,13 +3,14 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.18.0",
   "engines": {
     "node": ">=24"
   },
   "scripts": {
     "start": "node build",
     "test": "node --test test/*.test.js",
-    "test:integration": "npm run build && node --test test/*.integration.js",
+    "test:integration": "pnpm run build && node --test test/*.integration.js",
     "test:browser": "playwright test",
     "dev": "vite dev",
     "build": "vite build",

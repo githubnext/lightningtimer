@@ -4,7 +4,7 @@ export default defineConfig({
   testDir: './test/browser',
   use: { baseURL: 'http://127.0.0.1:4173' },
   webServer: {
-    command: 'npm run build && node build',
+    command: 'pnpm run build && node build',
     url: 'http://127.0.0.1:4173',
     env: {
       HOST: '127.0.0.1',
